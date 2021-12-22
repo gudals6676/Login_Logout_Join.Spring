@@ -1,0 +1,154 @@
+-Controller-
+
+@Controller
+@Slf4j
+public class muscleController {
+	@Inject
+	private muscleMapper muscleMapper;
+
+	// 로그인 기능
+	@RequestMapping("/login.do")
+	public ModelAndView login(userVO vo, HttpServletRequest request) { // 로그인 기능
+		ModelAndView mav = new ModelAndView();
+		System.out.println("컨트롤러임");
+		int idCheck = muscleMapper.checkId(vo);
+		/* int pwCheck = muscleMapper.checkPw(vo); */
+		log.info("아이디 체크" + idCheck);
+		if (idCheck > 0) {
+			userVO uservo = muscleMapper.login(vo);
+			HttpSession session = request.getSession();
+			session.setAttribute("userVO", uservo);
+			mav.setViewName("redirect:/test.do");
+		} else {
+			mav.addObject("msg", new Gson().toJson("사용자 정보가 일치하지 않습니다."));
+			mav.setViewName("redirect:/gologin.do");
+		}
+		System.out.println(mav);
+		// 세션을 가져올때 model을 사용하면 너무 복잡해서 그냥 이거 생성해서 세션을 가져오거나 생성해주는 조건문을 주고
+		// model.addAttribute("uservo", uservo); // addAttribute: session
+		return mav;
+	}
+
+	// 로그아웃 기능
+	@RequestMapping("/logout.do")
+	public String logout(HttpServletRequest request) { // 로그아웃 기능
+		System.out.println("로그아웃하러들어옴");
+		HttpSession session = request.getSession();
+		session.invalidate();
+		return "redirect:/test.do";
+	}
+
+
+	// 회원가입
+	@RequestMapping("/userInsert.do")
+	public String MinInsert(userVO vo) {
+		muscleMapper.userInsert(vo);
+		return "login";
+	}
+
+
+
+
+	// 회원가입 기능
+	@RequestMapping("/joinfunction.do")
+	public String joinfunction() {
+		return "login";
+	}
+
+	// 게시판 글쓰기
+	@PostMapping("/boardInsert.do")
+	public String boardInsert(userVO vo) { // 파라메터수집(자동) -> new BoardVO();
+		muscleMapper.boardInsert(vo);
+		return "redirect:/test.do#projects";
+	}
+
+	// 댓글 쓰기
+	@PostMapping("/muscleBoardContent.do")
+	public ModelAndView commentInsert(commentVO vo) { // 파라메터수집(자동) -> new commentVO();
+		System.out.println("컨트롤러ㅁㄴㅁㄴㅁㄴㅁ");
+		muscleMapper.commentInsert(vo);
+		System.out.println("게시판 번호" + vo.getIdx_b());
+		System.out.print("id는?" + vo.getId());
+		ModelAndView mav = new ModelAndView();
+		List<commentVO> cList = muscleMapper.commentListAjax(vo.getIdx_b());
+		boardVO bList = muscleMapper.muscleBoardContent(vo.getIdx_b());
+		mav.setViewName("muscleBoardContent");
+		mav.addObject("list2", cList);
+		mav.addObject("list1", bList);
+		return mav;
+	}
+	@RequestMapping("/musclevideo.do")
+	public void search(Model model) {
+		System.out.println("컨트롤러들어옴");
+		List<muscleVO> list = muscleMapper.search();
+		System.out.println("뽑긴함?");
+		model.addAttribute("list", list);
+		System.out.println("가져간다");
+		System.out.println(list);
+	}
+
+	// 회원정보 수정
+	@RequestMapping("/memberupdate.do")
+	public String memberupdate(userVO vo, Model model, String id) {
+		muscleMapper.memberupdate(vo);
+		userVO list = muscleMapper.returnmypage(id);
+		List<boardVO> list3 = muscleMapper.myboard(id);
+		List<commentVO> list4 = muscleMapper.mycomment(id);
+		model.addAttribute("list", list);
+		model.addAttribute("list3", list3);
+		model.addAttribute("list4", list4);
+		return "mypage";
+	}
+
+	 @RequestMapping("/reveiwupdate.do")
+	   public String reveiwupdate(commentVO vo, Model model, String id) {
+	      muscleMapper.reveiwupdate(vo);
+	      userVO list = muscleMapper.returnmypage(id);
+	      System.out.println("들어오나ㅣ????");
+	      List<boardVO> list3 = muscleMapper.myboard(id);
+	      System.out.println(id);
+	      List<commentVO> list4 = muscleMapper.mycomment(id);
+	      model.addAttribute("list", list);
+	      model.addAttribute("list3", list3);
+	      model.addAttribute("list4", list4);
+	      return "redirect:/mypage.do";
+
+	   }
+
+	   @RequestMapping("/reveiwDelete.do")
+	   public String reDelete(int idx_c, boardVO vo, Model model, String id) {
+	      muscleMapper.reviewDelete(idx_c);
+	      userVO list = muscleMapper.returnmypage(id);
+	      model.addAttribute("list", list);
+	      System.out.println("안들어오니??");
+	      List<boardVO> list3 = muscleMapper.myboard(id);
+	      List<commentVO> vo4 = muscleMapper.mycomment(id);
+	       model.addAttribute("list", list);
+	      model.addAttribute("list3", list3);
+	      model.addAttribute("list4", vo4);
+	      return "mypage";
+	   }	
+}
+-Mapper.Xml-
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper SYSTEM "http://mybatis.org/dtd/mybatis-3-mapper.dtd" PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN">
+
+-<mapper namespace="kr.co.mapper.muscleMapper">
+
+<!-- 패키지와 클래스를 해두기 인터페이스 이름이랑 똑같아야함 보드매퍼에서 이 네임스페이스를 통해서 찾아온다 -->
+-<select resultType="muscleVO" id="musclevideoAjax1">
+
+<select resultType="userVO" id="login">select * from tbl_user where id=#{id} and pw=#{pw} </select>
+
+<!-- 회원가입 기능 -->
+<insert id="joinfunction">insert into tbl_user(id, pw, name, tel)values(#{id},#{pw},#{name},#{tel}) </insert>
+
+	
+-Mapper.java-
+
+
+public String gologin(); // 로그인페이지 이동
+public String join(); // 회원가입페이지 이동
+public userVO login(userVO vo); // 로그인 기능
+public String logout(); // 로그아웃 기능
